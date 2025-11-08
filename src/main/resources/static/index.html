@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Currency Parser - Конвертер валют</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        header {
+            background: #2c3e50;
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            font-size: 1.2em;
+            opacity: 0.8;
+        }
+
+        .main-content {
+            padding: 30px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+
+        .converter-section, .rates-section {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 10px;
+            border: 1px solid #e9ecef;
+        }
+
+        h2 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #495057;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            transition: transform 0.2s;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+        }
+
+        .result {
+            margin-top: 20px;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            border-left: 4px solid #28a745;
+            display: none;
+        }
+
+        .result h3 {
+            color: #28a745;
+            margin-bottom: 10px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        th {
+            background: #2c3e50;
+            color: white;
+            font-weight: 600;
+        }
+
+        tr:hover {
+            background: #f8f9fa;
+        }
+
+        .currency-code {
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .rate-value {
+            font-weight: bold;
+            color: #28a745;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #6c757d;
+        }
+
+        .info-panel {
+            background: #e7f3ff;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #1890ff;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+
+            h1 {
+                font-size: 2em;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <header>
+        <h1>💱 Конвертер валют</h1>
+        <div class="subtitle">Актуальные курсы валют ЦБ РФ с конвертером</div>
+    </header>
+
+    <div class="main-content">
+        <div class="converter-section">
+            <h2>🔁 Конвертер валют</h2>
+
+            <div class="form-group">
+                <label for="amount">Сумма (RUB):</label>
+                <input type="number" id="amount" value="1000" min="0" step="0.01" placeholder="Введите сумму в рублях">
+            </div>
+
+            <div class="form-group">
+                <label for="toCurrency">Конвертировать в:</label>
+                <select id="toCurrency">
+                    <option value="">Выберите валюту...</option>
+                </select>
+            </div>
+
+            <button onclick="convertCurrency()">Конвертировать</button>
+
+            <div id="result" class="result">
+                <h3>Результат конвертации</h3>
+                <div id="resultText"></div>
+            </div>
+        </div>
+
+        <div class="rates-section">
+            <h2>📊 Курсы валют ЦБ РФ</h2>
+            <div id="loadingRates" class="loading">Загрузка курсов...</div>
+            <div id="ratesTable" style="display: none;">
+                <table>
+                    <thead>
+                    <tr>
+                        <th>Валюта</th>
+                        <th>Курс</th>
+                        <th>Код</th>
+                    </tr>
+                    </thead>
+                    <tbody id="ratesBody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        loadCurrencyRates();
+    });
+
+    async function loadCurrencyRates() {
+        try {
+            const response = await fetch('/answer?sortBy=name');
+            const rates = await response.json();
+
+            const currencySelect = document.getElementById('toCurrency');
+            currencySelect.innerHTML = '<option value="">Выберите валюту...</option>';
+
+            rates.forEach(rate => {
+                const option = document.createElement('option');
+                option.value = rate.charCode;
+                option.textContent = `${rate.name} (${rate.charCode})`;
+                currencySelect.appendChild(option);
+            });
+
+            displayRatesTable(rates);
+
+        } catch (error) {
+            console.error('Ошибка загрузки курсов:', error);
+            document.getElementById('loadingRates').innerHTML =
+            '<div style="color: red;">Ошибка загрузки данных. Убедитесь, что сервер запущен.</div>';
+        }
+    }
+
+    function displayRatesTable(rates) {
+        const tbody = document.getElementById('ratesBody');
+        tbody.innerHTML = '';
+
+        const majorCurrencies = ['USD', 'EUR', 'CNY', 'GBP', 'JPY', 'CHF', 'CAD', 'AUD'];
+        const filteredRates = rates.filter(rate => majorCurrencies.includes(rate.charCode));
+
+        if (filteredRates.length === 0) {
+            document.getElementById('loadingRates').innerHTML =
+            '<div style="color: orange;">Данные не найдены. Запустите парсинг через POST /start-parsing</div>';
+            return;
+        }
+
+        filteredRates.forEach(rate => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                    <td>${rate.name}</td>
+                    <td class="rate-value">${rate.rate.toFixed(4)} RUB</td>
+                    <td class="currency-code">${rate.charCode}</td>
+                `;
+            tbody.appendChild(row);
+        });
+
+        document.getElementById('loadingRates').style.display = 'none';
+        document.getElementById('ratesTable').style.display = 'block';
+    }
+
+    async function convertCurrency() {
+        const amount = parseFloat(document.getElementById('amount').value);
+        const toCurrency = document.getElementById('toCurrency').value;
+
+        if (!amount || amount <= 0) {
+            alert('Пожалуйста, введите корректную сумму');
+            return;
+        }
+
+        if (!toCurrency) {
+            alert('Пожалуйста, выберите валюту для конвертации');
+            return;
+        }
+
+        try {
+            const response = await fetch(`/convert?amount=${amount}&to=${toCurrency}`);
+            const result = await response.text();
+
+            const resultDiv = document.getElementById('result');
+            const resultText = document.getElementById('resultText');
+
+            resultText.innerHTML = `<p>${result}</p>`;
+            resultDiv.style.display = 'block';
+
+        } catch (error) {
+            console.error('Ошибка конвертации:', error);
+            alert('Ошибка при конвертации валюты. Убедитесь, что сервер запущен.');
+        }
+    }
+
+    setInterval(loadCurrencyRates, 30 * 60 * 1000);
+</script>
+</body>
+</html>
